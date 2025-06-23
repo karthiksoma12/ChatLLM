@@ -1,4 +1,4 @@
-streamlit==1.46.0
-beautifulsoup4==4.12.3
-together==1.5.17
-lxml==5.2.1
+streamlit
+beautifulsoup4
+together
+lxml
