@@ -19,7 +19,7 @@ def login_page():
         if username in VALID_USERS and VALID_USERS[username] == password:
             st.session_state["authenticated"] = True
             st.success("Login successful! Please proceed.")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Invalid username or password.")
 
