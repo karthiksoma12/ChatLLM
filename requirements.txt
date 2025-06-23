@@ -1,0 +1,4 @@
+streamlit==1.46.0
+beautifulsoup4==4.12.3
+together==0.2.12
+lxml==5.2.1
