@@ -17,7 +17,6 @@ def login_page():
     if st.button("Login"):
         if username in VALID_USERS and VALID_USERS[username] == password:
             st.session_state["authenticated"] = True
-            st.success("Login successful!")
             st.rerun()
         else:
             st.error("Invalid username or password.")
@@ -41,58 +40,65 @@ Answer:"""
     except Exception as e:
         return f"Together AI Error: {e}"
 
-# --- Phase 1: Paste Description UI ---
+# --- Phase 1: Input Description ---
 def description_input_screen():
-    st.set_page_config(page_title="Airbnb Description Input", layout="centered")
-    st.title("📋 Airbnb Listing Input")
-    st.markdown("Paste the Airbnb listing description below to start chatting.")
+    st.set_page_config(page_title="Airbnb Description", layout="wide")
+    st.title("📋 Paste Airbnb Description")
 
-    description = st.text_area("Listing Description", height=300)
+    description = st.text_area("Paste the Airbnb listing description below:", height=300)
 
-    if st.button("Load Description"):
+    if st.button("Start Chat"):
         if description.strip():
             st.session_state["context"] = description.strip()
             st.session_state["chat_history"] = []
             st.session_state["context_loaded"] = True
             st.rerun()
         else:
-            st.warning("Please paste the listing description.")
+            st.warning("Please enter a valid description.")
 
-# --- Phase 2: Chatbot UI ---
+# --- Phase 2: Chat Interface ---
 def chatbot_screen():
-    st.set_page_config(page_title="Airbnb Chatbot", layout="centered")
-    st.title("💬 Airbnb Chatbot")
+    st.set_page_config(page_title="Chatbot", layout="wide")
+    st.markdown("<h1 style='text-align: center;'>💬 Airbnb Chatbot</h1>", unsafe_allow_html=True)
 
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
 
-    # Chat History
-    for chat in st.session_state["chat_history"]:
-        st.markdown(f"**You:** {chat['question']}")
-        st.markdown(f"**Bot:** {chat['answer']}")
+    # --- Chat Display ---
+    chat_container = st.container()
+    with chat_container:
+        for chat in st.session_state["chat_history"]:
+            with st.chat_message("user"):
+                st.markdown(chat["question"])
+            with st.chat_message("assistant"):
+                st.markdown(chat["answer"])
 
-    # Chat Input
-    with st.form("chat_form", clear_on_submit=True):
-        user_input = st.text_input("Ask something about the listing...")
-        submitted = st.form_submit_button("Send")
-        if submitted and user_input.strip():
-            with st.spinner("Thinking..."):
-                answer = ask_together_ai(user_input.strip(), st.session_state["context"])
-            st.session_state["chat_history"].append({"question": user_input.strip(), "answer": answer})
-            st.rerun()
+    # --- Input Bar (like ChatGPT) ---
+    if prompt := st.chat_input("Ask something about the listing..."):
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.spinner("Assistant typing..."):
+            answer = ask_together_ai(prompt, st.session_state["context"])
+        with st.chat_message("assistant"):
+            st.markdown(answer)
+        st.session_state["chat_history"].append({"question": prompt, "answer": answer})
 
-    # Option to restart
-    if st.button("🔁 Reset"):
-        for key in ["context", "context_loaded", "chat_history"]:
-            st.session_state.pop(key, None)
-        st.rerun()
+    # --- Reset Button ---
+    st.sidebar.button("🔁 Restart", on_click=reset_app)
 
-# --- Auth & Flow Control ---
+# --- Reset State ---
+def reset_app():
+    for key in ["context", "context_loaded", "chat_history"]:
+        st.session_state.pop(key, None)
+    st.rerun()
+
+# --- Auth & Flow ---
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+
 if not st.session_state["authenticated"]:
     login_page()
-elif "context_loaded" in st.session_state and st.session_state["context_loaded"]:
+elif st.session_state.get("context_loaded"):
     chatbot_screen()
 else:
     description_input_screen()
