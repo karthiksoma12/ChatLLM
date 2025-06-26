@@ -41,32 +41,58 @@ Answer:"""
     except Exception as e:
         return f"Together AI Error: {e}"
 
-# --- Main App ---
-def main_app():
-    st.set_page_config(page_title="Airbnb Q&A", layout="centered")
-    st.title("🏡 Airbnb Listing Q&A")
+# --- Phase 1: Paste Description UI ---
+def description_input_screen():
+    st.set_page_config(page_title="Airbnb Description Input", layout="centered")
+    st.title("📋 Airbnb Listing Input")
+    st.markdown("Paste the Airbnb listing description below to start chatting.")
 
-    description = st.text_area("Paste the Airbnb listing description here:", height=300)
+    description = st.text_area("Listing Description", height=300)
 
-    if description.strip():
-        st.session_state["context"] = description.strip()
+    if st.button("Load Description"):
+        if description.strip():
+            st.session_state["context"] = description.strip()
+            st.session_state["chat_history"] = []
+            st.session_state["context_loaded"] = True
+            st.rerun()
+        else:
+            st.warning("Please paste the listing description.")
 
-    if "context" in st.session_state:
-        question = st.text_input("Ask a question about the listing:")
+# --- Phase 2: Chatbot UI ---
+def chatbot_screen():
+    st.set_page_config(page_title="Airbnb Chatbot", layout="centered")
+    st.title("💬 Airbnb Chatbot")
 
-        if st.button("Get Answer"):
-            if not question.strip():
-                st.warning("Please enter a question.")
-            else:
-                with st.spinner("Answering..."):
-                    answer = ask_together_ai(question, st.session_state["context"])
-                st.markdown(f"**Answer:** {answer}")
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
 
-# --- Auth Flow ---
+    # Chat History
+    for chat in st.session_state["chat_history"]:
+        st.markdown(f"**You:** {chat['question']}")
+        st.markdown(f"**Bot:** {chat['answer']}")
+
+    # Chat Input
+    with st.form("chat_form", clear_on_submit=True):
+        user_input = st.text_input("Ask something about the listing...")
+        submitted = st.form_submit_button("Send")
+        if submitted and user_input.strip():
+            with st.spinner("Thinking..."):
+                answer = ask_together_ai(user_input.strip(), st.session_state["context"])
+            st.session_state["chat_history"].append({"question": user_input.strip(), "answer": answer})
+            st.rerun()
+
+    # Option to restart
+    if st.button("🔁 Reset"):
+        for key in ["context", "context_loaded", "chat_history"]:
+            st.session_state.pop(key, None)
+        st.rerun()
+
+# --- Auth & Flow Control ---
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
 if not st.session_state["authenticated"]:
     login_page()
+elif "context_loaded" in st.session_state and st.session_state["context_loaded"]:
+    chatbot_screen()
 else:
-    main_app()
+    description_input_screen()
